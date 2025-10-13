@@ -1,0 +1,206 @@
+{% extends 'base.html' %} {% block content %}
+<section class="card">
+  <h2>Entrada del grafo (por campos)</h2>
+  <p>
+    Agrega filas con <code>origen</code>, <code>destino</code> y
+    <code>peso</code>. Puedes sumar o quitar filas con los botones.
+  </p>
+
+  <form action="{{ url_for('solve') }}" method="post" id="graph-form">
+    <div class="grid-2">
+      <label
+        >Nodo de salida (start):
+        <input
+          type="text"
+          name="start"
+          required
+          placeholder="a"
+          value="{{ request.form.get('start','a') }}"
+        />
+      </label>
+      <label
+        >Nodo destino (target, opcional):
+        <input
+          type="text"
+          name="target"
+          placeholder="d"
+          value="{{ request.form.get('target','d') }}"
+        />
+      </label>
+    </div>
+
+    <label class="checkbox">
+      <input type="checkbox" name="directed" {% if
+      request.form.get('directed')=='on' %}checked{% endif %} /> Grafo dirigido
+      (si no marcas, será no dirigido)
+    </label>
+
+    <h3>Aristas</h3>
+    <div id="client-error" class="error-banner" hidden></div>
+    <table class="table" id="edges-table">
+      <thead>
+        <tr>
+          <th>Origen</th>
+          <th>Destino</th>
+          <th>Peso</th>
+          <th style="width: 1%">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Filas iniciales de ejemplo -->
+        <tr>
+          <td><input type="text" name="u" value="a" /></td>
+          <td><input type="text" name="v" value="b" /></td>
+          <td><input type="number" name="w" step="any" min="0" value="4" /></td>
+          <td><button type="button" class="row-del">✕</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" name="u" value="a" /></td>
+          <td><input type="text" name="v" value="c" /></td>
+          <td><input type="number" name="w" step="any" min="0" value="3" /></td>
+          <td><button type="button" class="row-del">✕</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" name="u" value="c" /></td>
+          <td><input type="text" name="v" value="b" /></td>
+          <td><input type="number" name="w" step="any" min="0" value="2" /></td>
+          <td><button type="button" class="row-del">✕</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" name="u" value="b" /></td>
+          <td><input type="text" name="v" value="d" /></td>
+          <td><input type="number" name="w" step="any" min="0" value="5" /></td>
+          <td><button type="button" class="row-del">✕</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" name="u" value="c" /></td>
+          <td><input type="text" name="v" value="d" /></td>
+          <td><input type="number" name="w" step="any" min="0" value="7" /></td>
+          <td><button type="button" class="row-del">✕</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="actions">
+      <button type="button" id="add-row" class="secondary">
+        + Agregar fila
+      </button>
+      <button type="button" id="clear-rows" class="secondary">
+        Limpiar filas
+      </button>
+      <div style="flex: 1"></div>
+      <button type="submit">Calcular Dijkstra</button>
+    </div>
+
+    <!-- plantilla de fila -->
+    <template id="row-template">
+      <tr>
+        <td><input type="text" name="u" /></td>
+        <td><input type="text" name="v" /></td>
+        <td><input type="number" name="w" step="any" min="0" /></td>
+        <td><button type="button" class="row-del">✕</button></td>
+      </tr>
+    </template>
+  </form>
+</section>
+
+<script>
+  (function () {
+    const form = document.getElementById("graph-form");
+    const tableBody = document
+      .getElementById("edges-table")
+      .querySelector("tbody");
+    const tpl = document.getElementById("row-template");
+    const addBtn = document.getElementById("add-row");
+    const clearBtn = document.getElementById("clear-rows");
+    const banner = document.getElementById("client-error");
+
+    function addRow(u = "", v = "", w = "") {
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      const inputs = node.querySelectorAll("input");
+      inputs[0].value = u;
+      inputs[1].value = v;
+      inputs[2].value = w;
+      node
+        .querySelector(".row-del")
+        .addEventListener("click", () => node.remove());
+      tableBody.appendChild(node);
+    }
+
+    function setInvalid(input, on) {
+      if (on) {
+        input.classList.add("invalid");
+      } else {
+        input.classList.remove("invalid");
+      }
+    }
+
+    function showErrors(msgs) {
+      if (!msgs.length) {
+        banner.hidden = true;
+        banner.textContent = "";
+        return;
+      }
+      banner.hidden = false;
+      banner.innerHTML = msgs.map((m) => `<div>• ${m}</div>`).join("");
+    }
+
+    function validate() {
+      const rows = Array.from(tableBody.querySelectorAll("tr"));
+      let errors = [];
+      let firstInvalid = null;
+      rows.forEach((tr, idx) => {
+        const [u, v, w] = tr.querySelectorAll("input");
+        const hasAny = u.value.trim() || v.value.trim() || w.value.trim();
+        setInvalid(u, false);
+        setInvalid(v, false);
+        setInvalid(w, false);
+        if (!hasAny) return; // fila vacía permitida
+        if (!u.value.trim()) {
+          errors.push(`Fila ${idx + 1}: origen vacío`);
+          setInvalid(u, true);
+          firstInvalid ||= u;
+        }
+        if (!v.value.trim()) {
+          errors.push(`Fila ${idx + 1}: destino vacío`);
+          setInvalid(v, true);
+          firstInvalid ||= v;
+        }
+        if (!w.value.trim()) {
+          errors.push(`Fila ${idx + 1}: peso vacío`);
+          setInvalid(w, true);
+          firstInvalid ||= w;
+        }
+        const val = Number(w.value);
+        if (w.value && (Number.isNaN(val) || val < 0)) {
+          errors.push(`Fila ${idx + 1}: el peso debe ser numérico ≥ 0`);
+          setInvalid(w, true);
+          firstInvalid ||= w;
+        }
+      });
+      showErrors(errors);
+      if (firstInvalid) firstInvalid.focus();
+      return errors.length === 0;
+    }
+
+    addBtn.addEventListener("click", () => addRow());
+    clearBtn.addEventListener("click", () => {
+      tableBody.innerHTML = "";
+      showErrors([]);
+    });
+
+    // Habilita borrar en filas existentes
+    tableBody.querySelectorAll(".row-del").forEach((btn) =>
+      btn.addEventListener("click", (e) => {
+        e.target.closest("tr").remove();
+      })
+    );
+
+    form.addEventListener("submit", (e) => {
+      if (!validate()) {
+        e.preventDefault();
+      }
+    });
+  })();
+</script>
+{% endblock %}
