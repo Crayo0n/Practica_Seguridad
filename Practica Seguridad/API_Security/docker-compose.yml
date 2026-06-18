@@ -1,0 +1,133 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: API_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: escuela_api
+      MYSQL_USER: escuela_user
+      MYSQL_PASSWORD: escuela_pass
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_data:/var/lib/mysql
+    networks:
+      - escuela_net
+
+  api_v1:
+    build:
+      context: ./API
+      dockerfile: Dockerfile
+    container_name: api_v1
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    ports:
+      - "8001:8000"
+    command: uvicorn main_v1:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./API:/app
+    networks:
+      - escuela_net
+
+  api_v2:
+    build:
+      context: ./API
+      dockerfile: Dockerfile
+    container_name: api_v2
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    ports:
+      - "8002:8000"
+    command: uvicorn main_v2:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./API:/app
+    networks:
+      - escuela_net
+
+  api_v3:
+    build:
+      context: ./API
+      dockerfile: Dockerfile
+    container_name: api_v3
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    ports:
+      - "8003:8000"
+    command: uvicorn main_v3:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./API:/app
+    networks:
+      - escuela_net
+
+  api_v4:
+    build:
+      context: ./API
+      dockerfile: Dockerfile
+    container_name: api_v4
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    ports:
+      - "8004:8000"
+    command: uvicorn main_v4:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./API:/app
+    networks:
+      - escuela_net
+
+  api_v5:
+    build:
+      context: ./API
+      dockerfile: Dockerfile
+    container_name: api_v5
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    ports:
+      - "8005:8000"
+    command: uvicorn main_v5:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./API:/app
+    networks:
+      - escuela_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend_api_lab
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - api_v1
+      - api_v2
+      - api_v3
+      - api_v4
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./frontend:/app
+    networks:
+      - escuela_net
+
+volumes:
+  mysql_data:
+
+networks:
+  escuela_net:
