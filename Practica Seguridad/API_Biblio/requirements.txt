@@ -1,3 +1,9 @@
 fastapi
 uvicorn[standard]
 pydantic[email]
+sqlalchemy
+pymysql
+python-dotenv
+python-jose[cryptography]
+bcrypt
+slowapi

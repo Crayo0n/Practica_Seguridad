@@ -1,3 +1,7 @@
 /__pycache__
 /Practica Seguridad/API_Security/API/__pycache__
 /Dijkstra
+*.pyc
+.env
+.env.*
+!.env.example

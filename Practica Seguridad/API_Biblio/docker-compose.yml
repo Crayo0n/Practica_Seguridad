@@ -1,8 +1,38 @@
 services:
+  mysql_biblio:
+    image: mysql:8.0
+    container_name: mysql_biblio
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: biblioteca_api
+      MYSQL_USER: biblio_user
+      MYSQL_PASSWORD: biblio_pass
+    ports:
+      - "3309:3306"
+    volumes:
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_biblio_data:/var/lib/mysql
+    networks:
+      - biblio_net
+
   api:
     build: .
     container_name: server_fastapi_biblioteca
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mysql_biblio
     ports:
       - "5005:5005"
     volumes:
       - ./app:/app/app
+    networks:
+      - biblio_net
+
+volumes:
+  mysql_biblio_data:
+
+networks:
+  biblio_net:
