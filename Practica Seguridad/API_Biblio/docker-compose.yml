@@ -16,18 +16,76 @@ services:
     networks:
       - biblio_net
 
-  api:
-    build: .
-    container_name: server_fastapi_biblioteca
+  api_v1:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: api_biblio_v1
     restart: always
     env_file:
       - .env
     depends_on:
       - mysql_biblio
     ports:
-      - "5005:5005"
+      - "5001:5005"
+    command: uvicorn app.main_v1:app --host 0.0.0.0 --port 5005 --reload
     volumes:
       - ./app:/app/app
+    networks:
+      - biblio_net
+
+  api_v2:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: api_biblio_v2
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mysql_biblio
+    ports:
+      - "5002:5005"
+    command: uvicorn app.main_v2:app --host 0.0.0.0 --port 5005 --reload
+    volumes:
+      - ./app:/app/app
+    networks:
+      - biblio_net
+
+  api_v3:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: api_biblio_v3
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mysql_biblio
+    ports:
+      - "5003:5005"
+    command: uvicorn app.main_v3:app --host 0.0.0.0 --port 5005 --reload
+    volumes:
+      - ./app:/app/app
+    networks:
+      - biblio_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend_biblio
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - api_v1
+      - api_v2
+      - api_v3
+    ports:
+      - "9001:9000"
+    volumes:
+      - ./frontend:/app
     networks:
       - biblio_net
 
