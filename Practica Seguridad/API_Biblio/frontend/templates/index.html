@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca Digital - Security Lab Dashboard</title>
+    
+    <!-- Google Fonts: Inter (clean tech interface) & JetBrains Mono (code blocks) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-main: #f1f5f9;
+            --bg-card: #ffffff;
+            --border-color: #cbd5e1;
+            --primary: #4f46e5;
+            --primary-hover: #3730a3;
+            --secondary: #059669;
+            --secondary-hover: #047857;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        .logo-section h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        .logo-section p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .creator-badge {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .creator-badge strong {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* MAIN LAYOUT GRID */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* STANDARD CARD */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card h2 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-main);
+            border-left: 3px solid var(--primary);
+            padding-left: 10px;
+            line-height: 1.2;
+        }
+
+        /* CONTROL DE VERSION */
+        .version-control {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .badge-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .badge.active-ver {
+            background: var(--primary);
+            border: 1px solid var(--primary);
+            color: white;
+        }
+
+        .badge.secured {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+        }
+
+        .badge.unsecured {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+        }
+
+        .version-selector-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        select {
+            flex-grow: 1;
+            background: white;
+            border: 1px solid #cbd5e1;
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            outline: none;
+            font-family: var(--font-main);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        select:focus {
+            border-color: var(--primary);
+        }
+
+        /* INPUTS & BUTTONS */
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="email"] {
+            background: white;
+            border: 1px solid #cbd5e1;
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            outline: none;
+            font-family: var(--font-main);
+            font-size: 0.85rem;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        button.btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        button.btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        button.btn-secondary {
+            background: white;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+        }
+
+        button.btn-secondary:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+
+        button.btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        button.btn-danger:hover {
+            background: var(--danger-hover);
+        }
+
+        /* INFORMACION DE LA VERSION ACTIVA */
+        .info-box {
+            background: #f8fafc;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .info-box strong {
+            color: var(--text-main);
+        }
+
+        /* FORMULARIOS DE ACCION GRID */
+        .actions-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .actions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .action-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .action-card h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* RESPUESTA DE LA API / DEBUGGER */
+        .debugger-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .status-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .status-code {
+            font-family: var(--font-code);
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .status-code.success {
+            background: #ecfdf5;
+            color: var(--secondary);
+        }
+
+        .status-code.error {
+            background: #fef2f2;
+            color: var(--danger);
+        }
+
+        .url-box {
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            word-break: break-all;
+            background: #f8fafc;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+
+        pre {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            max-height: 400px;
+        }
+
+        code {
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            color: #f8fafc;
+            line-height: 1.5;
+        }
+
+        .empty-result {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            border: 1.5px dashed #cbd5e1;
+            border-radius: 8px;
+            gap: 10px;
+            background: white;
+        }
+
+        .empty-result svg {
+            stroke: var(--text-muted);
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body data-api-version="{{ api_version }}">
+
+<div class="container">
+    <!-- CABECERA -->
+    <header>
+        <div class="logo-section">
+            <h1>Biblioteca Digital</h1>
+            <p>Security Lab / Comparativa de APIs</p>
+        </div>
+    </header>
+
+    <!-- CUERPO PRINCIPAL DEL DASHBOARD -->
+    <div class="dashboard-grid">
+        <!-- COLUMNA IZQUIERDA: CONTROLES Y ACCIONES -->
+        <div class="actions-panel">
+            
+            <!-- PANEL DE CONTROL DE VERSIONES -->
+            <div class="card">
+                <h2>Control de Versión de la API</h2>
+                
+                <div class="badge-list">
+                    <span class="badge active-ver">ACTIVA: {{ api_version.upper() }}</span>
+                    {% if requiere_jwt %}
+                        <span class="badge secured">Requiere JWT</span>
+                    {% endif %}
+                    {% if requiere_api_key %}
+                        <span class="badge secured">Requiere API Key</span>
+                    {% endif %}
+                    {% if not requiere_api_key and not requiere_jwt %}
+                        <span class="badge unsecured">Sin Seguridad</span>
+                    {% endif %}
+                </div>
+
+                <form method="POST" class="version-selector-form">
+                    <input type="hidden" name="accion" value="cambiar_api">
+                    <select name="api_version" onchange="this.form.submit()">
+                        <option value="v1" {% if api_version == "v1" %}selected{% endif %}>
+                            V1 - Baseline (Sin Seguridad)
+                        </option>
+                        <option value="v2" {% if api_version == "v2" %}selected{% endif %}>
+                            V2 - API Key Control
+                        </option>
+                        <option value="v3" {% if api_version == "v3" %}selected{% endif %}>
+                            V3 - API Key + JWT Authentication
+                        </option>
+                    </select>
+                    <button type="submit" class="btn-primary">Aplicar</button>
+                </form>
+
+                <!-- EXPLICACIÓN DINÁMICA DE LA VERSIÓN -->
+                {% if api_version == "v1" %}
+                    <div class="info-box">
+                        <strong>Modo V1 (Sin Seguridad)</strong><br>
+                        Las peticiones se dirigen a <code>api_v1</code>. No se validan cabeceras, firmas ni identidades. Cualquier cliente con red accesible puede consultar y realizar préstamos.
+                    </div>
+                {% elif api_version == "v2" %}
+                    <div class="info-box">
+                        <strong>Modo V2 (API Key)</strong><br>
+                        Las peticiones se dirigen a <code>api_v2</code>. Cada endpoint valida de forma obligatoria que la cabecera <code>x-api-key</code> esté presente y contenga la clave válida configurada en el archivo de entorno.
+                    </div>
+                {% elif api_version == "v3" %}
+                    <div class="info-box">
+                        <strong>Modo V3 (API Key + JWT)</strong><br>
+                        Las peticiones se dirigen a <code>api_v3</code>. Además del control por API Key, se requiere iniciar sesión para obtener un token JWT. Cada petición posterior incluye el token en la cabecera <code>Authorization: Bearer &lt;token&gt;</code> para validar la sesión del usuario.
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- SESION / AUTENTICACION -->
+            {% if requiere_jwt %}
+            <div class="card">
+                <h2>Autenticación (JWT)</h2>
+                
+                {% if jwt_token %}
+                    <div class="info-box" style="border-color: #a7f3d0; background-color: #f0fdf4;">
+                        <p style="color: #047857; margin-bottom: 4px;"><strong>Sesión Activa</strong></p>
+                        <p>Usuario: <strong>{{ usuario_perfil.nombre }}</strong> ({{ usuario_perfil.email }})</p>
+                        <p style="margin-top: 4px;">Rol: <span class="badge" style="background-color: #e2e8f0; border-color: #cbd5e1; font-size: 0.7rem; color: #1e293b; text-transform: capitalize;">{{ usuario_perfil.rol }}</span></p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <form method="POST">
+                            <input type="hidden" name="accion" value="perfil">
+                            <button type="submit" class="btn-secondary" style="width: 100%;">
+                                Ver Perfil
+                            </button>
+                        </form>
+                        <form method="POST">
+                            <input type="hidden" name="accion" value="logout">
+                            <button type="submit" class="btn-danger" style="width: 100%;">
+                                Cerrar Sesión
+                            </button>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="info-box">
+                        <strong>Credenciales para pruebas:</strong><br>
+                        • Lector: <code>lector1@email.com</code> / <code>123456</code><br>
+                        • Admin: <code>mauricio@email.com</code> / <code>123456</code>
+                    </div>
+                    
+                    <form method="POST" class="form-row">
+                        <input type="hidden" name="accion" value="login">
+                        <div class="form-row">
+                            <label>Correo Electrónico</label>
+                            <input type="email" name="email" value="lector1@email.com" required>
+                        </div>
+                        <div class="form-row">
+                            <label>Contraseña</label>
+                            <input type="password" name="password" value="123456" style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; outline: none; font-family: var(--font-main); font-size: 0.85rem;" required>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top: 8px; width: 100%;">
+                            Iniciar Sesión
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- BOTONES DE ACCIÓN RÁPIDA -->
+            <div class="card">
+                <h2>Operaciones Disponibles</h2>
+                
+                <div class="actions-grid">
+                    
+                    <!-- CONSULTAR TODOS LOS LIBROS -->
+                    <div class="action-card">
+                        <h3>Libros Disponibles</h3>
+                        <form method="POST">
+                            <input type="hidden" name="accion" value="libros">
+                            <button type="submit" class="btn-secondary" style="width: 100%;">
+                                Listar Libros
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- BUSCAR LIBRO POR NOMBRE -->
+                    <div class="action-card">
+                        <h3>Buscar Libro</h3>
+                        <form method="POST" class="form-row">
+                            <input type="hidden" name="accion" value="buscar_libro">
+                            <input type="text" name="nombre_libro" placeholder="Ej. El Quijote" required>
+                            <button type="submit" class="btn-secondary">
+                                Buscar
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- REGISTRAR PRÉSTAMO -->
+                    <div class="action-card" style="grid-column: span 2;">
+                        <h3>Registrar Nuevo Préstamo</h3>
+                        <form method="POST" class="form-row">
+                            <input type="hidden" name="accion" value="crear_prestamo">
+                            <div style="display: grid; gap: 8px;">
+                                <div class="form-row">
+                                    <label>ID Préstamo</label>
+                                    <input type="number" name="id_prestamo" value="2" min="1" required>
+                                </div>
+                                <div class="form-row">
+                                    <label>ID Libro</label>
+                                    <input type="number" name="id_libro" value="2" min="1" required>
+                                </div>
+                                <div class="form-row">
+                                    <label>ID Usuario</label>
+                                    <input type="number" name="usuario_id" value="2" min="1" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary" style="margin-top: 8px;">
+                                Prestar Libro
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- DEVOLVER LIBRO -->
+                    <div class="action-card">
+                        <h3>Devolver Libro</h3>
+                        <form method="POST" class="form-row">
+                            <input type="hidden" name="accion" value="devolver_libro">
+                            <input type="number" name="id_libro_devolver" placeholder="ID del libro" value="1" min="1" required>
+                            <button type="submit" class="btn-secondary">
+                                Devolver
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- ELIMINAR PRÉSTAMO -->
+                    <div class="action-card">
+                        <h3>Eliminar Préstamo (Log)</h3>
+                        <form method="POST" class="form-row">
+                            <input type="hidden" name="accion" value="eliminar_prestamo">
+                            <input type="number" name="id_prestamo_eliminar" placeholder="ID del préstamo" value="1" min="1" required>
+                            <button type="submit" class="btn-danger">
+                                Eliminar
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- COLUMNA DERECHA: RESPUESTA DE LA API Y DEBUGGER -->
+        <div class="debugger-panel">
+            <div class="card" style="height: 100%;">
+                <h2>Consola de Depuración de Respuestas</h2>
+
+                {% if resultado %}
+                    <div class="status-badge">
+                        <span>Estado de la Solicitud:</span>
+                        {% if resultado.status_code %}
+                            <span class="status-code {% if resultado.ok %}success{% else %}error{% endif %}">
+                                {{ resultado.status_code }} {% if resultado.ok %}OK{% else %}ERROR{% endif %}
+                            </span>
+                        {% else %}
+                            <span class="status-code error">CONEXIÓN FALLIDA</span>
+                        {% endif %}
+                    </div>
+
+                    {% if resultado.url %}
+                        <div class="form-row">
+                            <label>URL Solicitada internamente:</label>
+                            <div class="url-box">
+                                {{ resultado.url }}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="form-row">
+                        <label>Encabezados enviados (Headers):</label>
+                        <div class="url-box" style="background-color: #f8fafc; white-space: pre-wrap; font-family: var(--font-code); line-height: 1.4;">
+                            {%- if requiere_api_key -%}
+x-api-key: BIBLIO123
+                            {%- endif -%}
+                            {%- if requiere_jwt and jwt_token -%}
+                                {%- if requiere_api_key -%}<br>{%- endif -%}
+Authorization: Bearer {{ jwt_token[:15] }}...{{ jwt_token[-15:] }}
+                            {%- endif -%}
+                            {%- if not requiere_api_key and not (requiere_jwt and jwt_token) -%}
+<em>Ninguno (Solicitud sin autenticación)</em>
+                            {%- endif -%}
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="flex-grow: 1;">
+                        <label>Cuerpo de la Respuesta (JSON):</label>
+                        <pre><code>{{ resultado.data | tojson(indent=2) }}</code></pre>
+                    </div>
+                {% else %}
+                    <div class="empty-result">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                            <path d="M9 17h6M9 13h6M9 9h1"/>
+                        </svg>
+                        <h3>No hay peticiones recientes</h3>
+                        <p>Interactúa con las operaciones de la izquierda para ver los registros del tráfico API.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
