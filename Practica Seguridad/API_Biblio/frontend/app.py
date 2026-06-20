@@ -197,6 +197,30 @@ def index():
                     "data": {"error": "El ID de préstamo debe ser un número entero."}
                 }
 
+        elif accion == "ver_prestamo_vulnerable":
+            try:
+                id_prestamo = int(request.form.get("id_prestamo_ver", "1"))
+                resultado = llamar_api("GET", f"/api/vulnerable/prestamos/{id_prestamo}")
+            except ValueError:
+                resultado = {
+                    "ok": False,
+                    "status_code": 400,
+                    "url": None,
+                    "data": {"error": "El ID de préstamo debe ser un número entero."}
+                }
+
+        elif accion == "ver_prestamo_seguro":
+            try:
+                id_prestamo = int(request.form.get("id_prestamo_ver", "1"))
+                resultado = llamar_api("GET", f"/api/prestamos/{id_prestamo}")
+            except ValueError:
+                resultado = {
+                    "ok": False,
+                    "status_code": 400,
+                    "url": None,
+                    "data": {"error": "El ID de préstamo debe ser un número entero."}
+                }
+
     api_version = obtener_api_actual()
 
     return render_template(

@@ -436,6 +436,12 @@
                         <option value="v3" {% if api_version == "v3" %}selected{% endif %}>
                             V3 - API Key + JWT Authentication
                         </option>
+                        <option value="v4" {% if api_version == "v4" %}selected{% endif %}>
+                            V4 - Roles (RBAC) & BOLA Protection
+                        </option>
+                        <option value="v5" {% if api_version == "v5" %}selected{% endif %}>
+                            V5 - Rate Limiting & Securing
+                        </option>
                     </select>
                     <button type="submit" class="btn-primary">Aplicar</button>
                 </form>
@@ -455,6 +461,16 @@
                     <div class="info-box">
                         <strong>Modo V3 (API Key + JWT)</strong><br>
                         Las peticiones se dirigen a <code>api_v3</code>. Además del control por API Key, se requiere iniciar sesión para obtener un token JWT. Cada petición posterior incluye el token en la cabecera <code>Authorization: Bearer &lt;token&gt;</code> para validar la sesión del usuario.
+                    </div>
+                {% elif api_version == "v4" %}
+                    <div class="info-box">
+                        <strong>Modo V4 (RBAC & BOLA Protection)</strong><br>
+                        Las peticiones se dirigen a <code>api_v4</code>. Valida API Key, JWT y además implementa Control de Acceso por Roles (RBAC) (ej. solo 'admin' crea libros). Previene vulnerabilidades <strong>BOLA/IDOR</strong> asegurando que un lector solo cree, devuelva o cancele sus propios préstamos.
+                    </div>
+                {% elif api_version == "v5" %}
+                    <div class="info-box">
+                        <strong>Modo V5 (Rate Limiting)</strong><br>
+                        Las peticiones se dirigen a <code>api_v5</code>. Incluye todas las capas de seguridad de V4 y añade <strong>Rate Limiting</strong> (limitación de peticiones por minuto) para evitar ataques de denegación de servicio (DoS) o fuerza bruta.
                     </div>
                 {% endif %}
             </div>
@@ -587,6 +603,35 @@
                             </button>
                         </form>
                     </div>
+
+                    <!-- PROBAR BOLA (VULNERABLE VS SEGURO) -->
+                    {% if api_version in ['v4', 'v5'] %}
+                    <div class="action-card" style="grid-column: span 2; border-color: #fca5a5; background-color: #fffaf0;">
+                        <h3 style="color: #b91c1c; border-left-color: #b91c1c; display: flex; align-items: center; gap: 6px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #b91c1c;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            Laboratorio BOLA/IDOR (V4+)
+                        </h3>
+                        <p style="font-size: 0.75rem; color: #7f1d1d;">Permite probar cómo un Lector puede acceder a datos de otros préstamos en la ruta vulnerable, y cómo es bloqueado en la ruta protegida.</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                            <form method="POST" class="form-row">
+                                <input type="hidden" name="accion" value="ver_prestamo_vulnerable">
+                                <label>ID Préstamo (Ruta Vulnerable)</label>
+                                <input type="number" name="id_prestamo_ver" value="1" min="1" required>
+                                <button type="submit" class="btn-danger" style="width: 100%; font-size: 0.75rem; padding: 6px;">
+                                    Consulta Vulnerable
+                                </button>
+                            </form>
+                            <form method="POST" class="form-row">
+                                <input type="hidden" name="accion" value="ver_prestamo_seguro">
+                                <label>ID Préstamo (Ruta Protegida)</label>
+                                <input type="number" name="id_prestamo_ver" value="1" min="1" required>
+                                <button type="submit" class="btn-primary" style="width: 100%; font-size: 0.75rem; padding: 6px; background-color: #4f46e5;">
+                                    Consulta Protegida
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
 
                 </div>
             </div>
