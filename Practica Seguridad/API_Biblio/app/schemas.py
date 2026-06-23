@@ -29,7 +29,7 @@ class Libro(BaseModel):
 
 
 class Prestamo(BaseModel):
-    id_prestamo: int = Field(..., gt=0, description="Identificador de Prestamo", example=1)
+    id_prestamo: int | None = Field(default=None, description="Identificador de Prestamo (opcional)", example=1)
     id_libro: int
     usuario_id: int
 
@@ -42,5 +42,21 @@ class PrestamoResponse(BaseModel):
     nombre_libro: str
     usuario_id: int
     correo_usuario: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UsuarioCreate(BaseModel):
+    nombre: str = Field(..., min_length=2, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    rol: str = Field(default="usuario", pattern="^(usuario|admin)$")
+
+
+class UsuarioResponse(BaseModel):
+    id: int
+    nombre: str
+    email: str
+    rol: str
 
     model_config = ConfigDict(from_attributes=True)

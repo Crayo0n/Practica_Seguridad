@@ -211,19 +211,20 @@ def registrar_libro(
     return {"mensaje": "Libro registrado con éxito", "libro": schemas.Libro.model_validate(nuevo_libro)}
 
 
-# Listar todos los libros Disponibles
+# Listar libros
 @app.get("/libros", response_model=list[schemas.Libro])
-def listar_libros_disponibles(
+def listar_libros(
+    estado: str | None = None,
     api_key_valida: bool = Depends(validar_api_key),
     usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
     db: Session = Depends(get_db)
 ):
-    libros = (
-        db.query(models.Libro)
-        .filter(models.Libro.estado == schemas.EstadoLibro.disponible.value)
-        .all()
-    )
-    return libros
+    query = db.query(models.Libro)
+    if estado:
+        query = query.filter(models.Libro.estado == estado)
+    else:
+        query = query.filter(models.Libro.estado == schemas.EstadoLibro.disponible.value)
+    return query.all()
 
 
 # Buscar un libro por su nombre
@@ -254,15 +255,16 @@ def prestar_libro(
     usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
     db: Session = Depends(get_db)
 ):
-    # Verificar si el id_prestamo ya existe
-    db_prestamo = (
-        db.query(models.Prestamo)
-        .filter(models.Prestamo.id_prestamo == prestamo.id_prestamo)
-        .first()
-    )
+    if prestamo.id_prestamo is not None:
+        # Verificar si el id_prestamo ya existe
+        db_prestamo = (
+            db.query(models.Prestamo)
+            .filter(models.Prestamo.id_prestamo == prestamo.id_prestamo)
+            .first()
+        )
 
-    if db_prestamo:
-        raise HTTPException(status_code=400, detail="El id_prestamo ya existe")
+        if db_prestamo:
+            raise HTTPException(status_code=400, detail="El id_prestamo ya existe")
 
     # Verificar si el usuario a prestar existe
     usuario_encontrado = (
@@ -292,10 +294,11 @@ def prestar_libro(
 
     # Crear el préstamo
     nuevo_prestamo = models.Prestamo(
-        id_prestamo=prestamo.id_prestamo,
         id_libro=prestamo.id_libro,
         usuario_id=prestamo.usuario_id
     )
+    if prestamo.id_prestamo is not None:
+        nuevo_prestamo.id_prestamo = prestamo.id_prestamo
 
     db.add(nuevo_prestamo)
     db.commit()
@@ -311,6 +314,32 @@ def prestar_libro(
     )
 
     return {"mensaje": "Préstamo exitoso", "prestamo": response_data}
+
+
+# Listar préstamos (Filtrado por rol de usuario para evitar fugas de información)
+@app.get("/prestamos", response_model=list[schemas.PrestamoResponse])
+def listar_prestamos(
+    api_key_valida: bool = Depends(validar_api_key),
+    usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
+    db: Session = Depends(get_db)
+):
+    if usuario_actual.rol == "admin":
+        prestamos = db.query(models.Prestamo).all()
+    else:
+        prestamos = db.query(models.Prestamo).filter(models.Prestamo.usuario_id == usuario_actual.id).all()
+
+    respuestas = []
+    for p in prestamos:
+        libro = db.query(models.Libro).filter(models.Libro.id_libro == p.id_libro).first()
+        usuario = db.query(models.Usuario).filter(models.Usuario.id == p.usuario_id).first()
+        respuestas.append(schemas.PrestamoResponse(
+            id_prestamo=p.id_prestamo,
+            id_libro=p.id_libro,
+            nombre_libro=libro.nombre if libro else "Desconocido",
+            usuario_id=p.usuario_id,
+            correo_usuario=usuario.email if usuario else "Desconocido"
+        ))
+    return respuestas
 
 
 # Marcar un libro como devuelto
@@ -357,3 +386,37 @@ def eliminar_prestamo(
     db.commit()
 
     return {"mensaje": "Registro de préstamo eliminado correctamente"}
+
+
+def obtener_password_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(14)).decode("utf-8")
+
+
+# Crear un nuevo usuario (Restringido a Admin en v3)
+@app.post("/usuarios", response_model=schemas.UsuarioResponse, status_code=status.HTTP_201_CREATED)
+def crear_usuario(
+    usuario: schemas.UsuarioCreate,
+    api_key_valida: bool = Depends(validar_api_key),
+    usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
+    db: Session = Depends(get_db)
+):
+    if usuario_actual.rol != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Operación no permitida: sólo los administradores pueden crear usuarios."
+        )
+        
+    existe = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
+    if existe:
+        raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado")
+    
+    nuevo_usuario = models.Usuario(
+        nombre=usuario.nombre,
+        email=usuario.email,
+        password=obtener_password_hash(usuario.password),
+        rol=usuario.rol
+    )
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+    return nuevo_usuario

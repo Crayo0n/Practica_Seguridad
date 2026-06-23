@@ -260,21 +260,22 @@ def registrar_libro(
     return {"mensaje": "Libro registrado con éxito", "libro": schemas.Libro.model_validate(nuevo_libro)}
 
 
-# Listar todos los libros Disponibles - Limitado a 5 por minuto para pruebas visuales en el front
+# Listar libros - Limitado a 5 por minuto para pruebas visuales en el front
 @app.get("/libros", response_model=list[schemas.Libro])
 @limiter.limit("5/minute")
-def listar_libros_disponibles(
+def listar_libros(
     request: Request,
+    estado: str | None = None,
     api_key_valida: bool = Depends(validar_api_key),
     usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
     db: Session = Depends(get_db)
 ):
-    libros = (
-        db.query(models.Libro)
-        .filter(models.Libro.estado == schemas.EstadoLibro.disponible.value)
-        .all()
-    )
-    return libros
+    query = db.query(models.Libro)
+    if estado:
+        query = query.filter(models.Libro.estado == estado)
+    else:
+        query = query.filter(models.Libro.estado == schemas.EstadoLibro.disponible.value)
+    return query.all()
 
 
 # Buscar un libro por su nombre
@@ -319,15 +320,16 @@ def prestar_libro(
             }
         )
 
-    # Verificar si el id_prestamo ya existe
-    db_prestamo = (
-        db.query(models.Prestamo)
-        .filter(models.Prestamo.id_prestamo == prestamo.id_prestamo)
-        .first()
-    )
+    if prestamo.id_prestamo is not None:
+        # Verificar si el id_prestamo ya existe
+        db_prestamo = (
+            db.query(models.Prestamo)
+            .filter(models.Prestamo.id_prestamo == prestamo.id_prestamo)
+            .first()
+        )
 
-    if db_prestamo:
-        raise HTTPException(status_code=400, detail="El id_prestamo ya existe")
+        if db_prestamo:
+            raise HTTPException(status_code=400, detail="El id_prestamo ya existe")
 
     # Verificar si el usuario a prestar existe en la BD
     usuario_encontrado = (
@@ -357,10 +359,11 @@ def prestar_libro(
 
     # Crear el préstamo
     nuevo_prestamo = models.Prestamo(
-        id_prestamo=prestamo.id_prestamo,
         id_libro=prestamo.id_libro,
         usuario_id=prestamo.usuario_id
     )
+    if prestamo.id_prestamo is not None:
+        nuevo_prestamo.id_prestamo = prestamo.id_prestamo
 
     db.add(nuevo_prestamo)
     db.commit()
@@ -376,6 +379,34 @@ def prestar_libro(
     )
 
     return {"mensaje": "Préstamo exitoso", "prestamo": response_data}
+
+
+# Listar préstamos (Filtrado por rol de usuario para evitar fugas de información) - Limitado a 5 por minuto
+@app.get("/prestamos", response_model=list[schemas.PrestamoResponse])
+@limiter.limit("5/minute")
+def listar_prestamos(
+    request: Request,
+    api_key_valida: bool = Depends(validar_api_key),
+    usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
+    db: Session = Depends(get_db)
+):
+    if usuario_actual.rol == "admin":
+        prestamos = db.query(models.Prestamo).all()
+    else:
+        prestamos = db.query(models.Prestamo).filter(models.Prestamo.usuario_id == usuario_actual.id).all()
+
+    respuestas = []
+    for p in prestamos:
+        libro = db.query(models.Libro).filter(models.Libro.id_libro == p.id_libro).first()
+        usuario = db.query(models.Usuario).filter(models.Usuario.id == p.usuario_id).first()
+        respuestas.append(schemas.PrestamoResponse(
+            id_prestamo=p.id_prestamo,
+            id_libro=p.id_libro,
+            nombre_libro=libro.nombre if libro else "Desconocido",
+            usuario_id=p.usuario_id,
+            correo_usuario=usuario.email if usuario else "Desconocido"
+        ))
+    return respuestas
 
 
 # Marcar un libro como devuelto (Con BOLA validado)
@@ -513,6 +544,65 @@ def obtener_prestamo_seguro(
     if not prestamo:
         raise HTTPException(status_code=404, detail="Préstamo no encontrado")
 
+# Ruta vulnerable (Demo BOLA): permite obtener cualquier préstamo sin validar propiedad
+@app.get("/api/vulnerable/prestamos/{id_prestamo}")
+@limiter.limit("5/minute")
+def obtener_prestamo_vulnerable(
+    request: Request,
+    id_prestamo: int,
+    api_key_valida: bool = Depends(validar_api_key),
+    usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
+    db: Session = Depends(get_db)
+):
+    prestamo = (
+        db.query(models.Prestamo)
+        .filter(models.Prestamo.id_prestamo == id_prestamo)
+        .first()
+    )
+
+    if not prestamo:
+        raise HTTPException(status_code=404, detail="Préstamo no encontrado")
+
+    libro = db.query(models.Libro).filter(models.Libro.id_libro == prestamo.id_libro).first()
+    usuario_prestamo = db.query(models.Usuario).filter(models.Usuario.id == prestamo.usuario_id).first()
+
+    return {
+        "advertencia": "Esta ruta es vulnerable a BOLA/IDOR",
+        "explicacion": "Valida API Key y JWT, pero no valida si el préstamo solicitado pertenece al usuario autenticado o si es administrador.",
+        "usuario_autenticado": {
+            "id": usuario_actual.id,
+            "nombre": usuario_actual.nombre,
+            "rol": usuario_actual.rol
+        },
+        "datos": {
+            "id_prestamo": prestamo.id_prestamo,
+            "id_libro": prestamo.id_libro,
+            "nombre_libro": libro.nombre if libro else "Desconocido",
+            "usuario_id": prestamo.usuario_id,
+            "correo_usuario": usuario_prestamo.email if usuario_prestamo else "Desconocido"
+        }
+    }
+
+
+# Ruta segura (Protegida contra BOLA)
+@app.get("/api/prestamos/{id_prestamo}")
+@limiter.limit("5/minute")
+def obtener_prestamo_seguro(
+    request: Request,
+    id_prestamo: int,
+    api_key_valida: bool = Depends(validar_api_key),
+    usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
+    db: Session = Depends(get_db)
+):
+    prestamo = (
+        db.query(models.Prestamo)
+        .filter(models.Prestamo.id_prestamo == id_prestamo)
+        .first()
+    )
+
+    if not prestamo:
+        raise HTTPException(status_code=404, detail="Préstamo no encontrado")
+
     # Validación BOLA/IDOR
     if usuario_actual.rol != "admin" and prestamo.usuario_id != usuario_actual.id:
         raise HTTPException(
@@ -522,6 +612,9 @@ def obtener_prestamo_seguro(
                 "mensaje": "No tienes permiso para consultar un préstamo que pertenece a otro usuario"
             }
         )
+
+    libro = db.query(models.Libro).filter(models.Libro.id_libro == prestamo.id_libro).first()
+    usuario_prestamo = db.query(models.Usuario).filter(models.Usuario.id == prestamo.usuario_id).first()
 
     return {
         "mensaje": "Acceso autorizado (Ruta Protegida contra BOLA)",
@@ -533,6 +626,44 @@ def obtener_prestamo_seguro(
         "datos": {
             "id_prestamo": prestamo.id_prestamo,
             "id_libro": prestamo.id_libro,
-            "usuario_id": prestamo.usuario_id
+            "nombre_libro": libro.nombre if libro else "Desconocido",
+            "usuario_id": prestamo.usuario_id,
+            "correo_usuario": usuario_prestamo.email if usuario_prestamo else "Desconocido"
         }
     }
+
+
+def obtener_password_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(14)).decode("utf-8")
+
+
+# Crear un nuevo usuario (Restringido a Admin en v5 + Rate Limiting)
+@app.post("/usuarios", response_model=schemas.UsuarioResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+def crear_usuario(
+    request: Request,
+    usuario: schemas.UsuarioCreate,
+    api_key_valida: bool = Depends(validar_api_key),
+    usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
+    db: Session = Depends(get_db)
+):
+    if usuario_actual.rol != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Operación no permitida: sólo los administradores pueden crear usuarios."
+        )
+        
+    existe = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
+    if existe:
+        raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado")
+    
+    nuevo_usuario = models.Usuario(
+        nombre=usuario.nombre,
+        email=usuario.email,
+        password=obtener_password_hash(usuario.password),
+        rol=usuario.rol
+    )
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+    return nuevo_usuario

@@ -147,20 +147,21 @@ def index():
         elif accion == "libros":
             resultado = llamar_api("GET", "/libros")
 
+        elif accion == "prestamos":
+            resultado = llamar_api("GET", "/prestamos")
+
         elif accion == "buscar_libro":
             nombre = request.form.get("nombre_libro", "")
             resultado = llamar_api("GET", f"/libros/{nombre}")
 
         elif accion == "crear_prestamo":
             try:
-                id_prestamo = int(request.form.get("id_prestamo", "1"))
                 id_libro = int(request.form.get("id_libro", "1"))
                 usuario_id = int(request.form.get("usuario_id", "1"))
                 resultado = llamar_api(
                     "POST",
                     "/prestamos",
                     json={
-                        "id_prestamo": id_prestamo,
                         "id_libro": id_libro,
                         "usuario_id": usuario_id
                     }
@@ -170,7 +171,7 @@ def index():
                     "ok": False,
                     "status_code": 400,
                     "url": None,
-                    "data": {"error": "Los IDs de préstamo, libro y usuario deben ser números enteros."}
+                    "data": {"error": "Los IDs de libro y usuario deben ser números enteros."}
                 }
 
         elif accion == "devolver_libro":
@@ -197,6 +198,22 @@ def index():
                     "data": {"error": "El ID de préstamo debe ser un número entero."}
                 }
 
+        elif accion == "crear_usuario":
+            nombre = request.form.get("nombre_usuario", "")
+            email = request.form.get("email_usuario", "")
+            password = request.form.get("password_usuario", "")
+            rol = request.form.get("rol_usuario", "usuario")
+            resultado = llamar_api(
+                "POST",
+                "/usuarios",
+                json={
+                    "nombre": nombre,
+                    "email": email,
+                    "password": password,
+                    "rol": rol
+                }
+            )
+
         elif accion == "ver_prestamo_vulnerable":
             try:
                 id_prestamo = int(request.form.get("id_prestamo_ver", "1"))
@@ -222,6 +239,39 @@ def index():
                 }
 
     api_version = obtener_api_actual()
+    libros_disponibles = []
+    libros_prestados = []
+    prestamos_activos = []
+
+    # Solo cargamos libros si no requiere JWT o si hay un JWT token en la sesión
+    if not requiere_jwt(api_version) or session.get("jwt_token"):
+        res_libros = llamar_api("GET", "/libros")
+        if res_libros.get("ok") and isinstance(res_libros.get("data"), list):
+            libros_disponibles = res_libros.get("data", [])
+
+        res_prestados = llamar_api("GET", "/libros?estado=prestado")
+        if res_prestados.get("ok") and isinstance(res_prestados.get("data"), list):
+            libros_prestados = res_prestados.get("data", [])
+
+        res_prestamos = llamar_api("GET", "/prestamos")
+        if res_prestamos.get("ok") and isinstance(res_prestamos.get("data"), list):
+            prestamos_activos = res_prestamos.get("data", [])
+
+        # Si requiere autenticación y el usuario no es administrador,
+        # restringir los libros prestados para devolución a los del propio usuario
+        if requiere_jwt(api_version) and session.get("jwt_token"):
+            perfil = session.get("usuario_perfil")
+            if perfil and perfil.get("rol") != "admin":
+                ids_libros_propios = {p["id_libro"] for p in prestamos_activos}
+                libros_prestados = [l for l in libros_prestados if l["id_libro"] in ids_libros_propios]
+
+    import json
+    resultado_json = None
+    if resultado and "data" in resultado:
+        try:
+            resultado_json = json.dumps(resultado["data"], indent=2, ensure_ascii=False)
+        except Exception:
+            resultado_json = str(resultado["data"])
 
     return render_template(
         "index.html",
@@ -231,7 +281,11 @@ def index():
         requiere_jwt=requiere_jwt(api_version),
         jwt_token=session.get("jwt_token"),
         usuario_perfil=session.get("usuario_perfil"),
-        resultado=resultado
+        libros_disponibles=libros_disponibles,
+        libros_prestados=libros_prestados,
+        prestamos_activos=prestamos_activos,
+        resultado=resultado,
+        resultado_json=resultado_json
     )
 
 

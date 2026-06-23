@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS biblioteca_api
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
@@ -44,15 +46,20 @@ CREATE TABLE prestamos (
 
 -- Datos iniciales para libros
 INSERT INTO libros (id_libro, nombre, anio_publicacion, paginas, estado) VALUES
-(1, 'El Quijote', 1605, 500, 'prestado'),
-(2, 'Cien años de soledad', 1967, 450, 'disponible'),
-(3, '1984', 1949, 328, 'disponible');
+(1, 'Cien años de soledad', 1967, 450, 'disponible'),
+(2, '1984', 1949, 328, 'disponible'),
+(3, 'El principito', 1943, 96, 'disponible'),
+(4, 'Don Quijote de la Mancha', 1605, 862, 'disponible'),
+(5, 'Fahrenheit 451', 1953, 256, 'prestado'),
+(6, 'Un mundo feliz', 1932, 288, 'prestado');
 
 -- Datos iniciales para usuarios
 INSERT INTO usuarios (id, nombre, email, password, rol) VALUES
 (1, 'Mauricio', 'mauricio@email.com', '$2y$14$UXmxexs.20ECHwup3yFafexN6w0OPKpJoPZ2TDAoY1xwP.FL5aHXC', 'admin'),
-(2, 'Lector1', 'lector1@email.com', '$2y$14$UXmxexs.20ECHwup3yFafexN6w0OPKpJoPZ2TDAoY1xwP.FL5aHXC', 'usuario');
+(2, 'Lector1', 'lector1@email.com', '$2y$14$UXmxexs.20ECHwup3yFafexN6w0OPKpJoPZ2TDAoY1xwP.FL5aHXC', 'usuario'),
+(3, 'Lector2', 'lector2@email.com', '$2y$14$UXmxexs.20ECHwup3yFafexN6w0OPKpJoPZ2TDAoY1xwP.FL5aHXC', 'usuario');
 
 -- Datos iniciales para prestamos
 INSERT INTO prestamos (id_prestamo, id_libro, usuario_id) VALUES
-(1, 1, 2);
+(1, 5, 2),
+(2, 6, 3);

@@ -398,7 +398,7 @@
     <header>
         <div class="logo-section">
             <h1>Biblioteca Digital</h1>
-            <p>Security Lab / Comparativa de APIs</p>
+            <p>Comparativa de APIs</p>
         </div>
     </header>
 
@@ -428,7 +428,7 @@
                     <input type="hidden" name="accion" value="cambiar_api">
                     <select name="api_version" onchange="this.form.submit()">
                         <option value="v1" {% if api_version == "v1" %}selected{% endif %}>
-                            V1 - Baseline (Sin Seguridad)
+                            V1 - Sin Seguridad
                         </option>
                         <option value="v2" {% if api_version == "v2" %}selected{% endif %}>
                             V2 - API Key Control
@@ -440,7 +440,7 @@
                             V4 - Roles (RBAC) & BOLA Protection
                         </option>
                         <option value="v5" {% if api_version == "v5" %}selected{% endif %}>
-                            V5 - Rate Limiting & Securing
+                            V5 - Rate Limiting
                         </option>
                     </select>
                     <button type="submit" class="btn-primary">Aplicar</button>
@@ -450,27 +450,27 @@
                 {% if api_version == "v1" %}
                     <div class="info-box">
                         <strong>Modo V1 (Sin Seguridad)</strong><br>
-                        Las peticiones se dirigen a <code>api_v1</code>. No se validan cabeceras, firmas ni identidades. Cualquier cliente con red accesible puede consultar y realizar préstamos.
+                        Las peticiones se dirigen a api_v1. No se validan cabeceras, firmas ni identidades. Cualquier cliente con red accesible puede consultar y realizar préstamos.
                     </div>
                 {% elif api_version == "v2" %}
                     <div class="info-box">
                         <strong>Modo V2 (API Key)</strong><br>
-                        Las peticiones se dirigen a <code>api_v2</code>. Cada endpoint valida de forma obligatoria que la cabecera <code>x-api-key</code> esté presente y contenga la clave válida configurada en el archivo de entorno.
+                        Las peticiones se dirigen a api_v2. Cada endpoint valida de forma obligatoria que la cabecera x-api-key esté presente y contenga la clave válida configurada en el archivo de entorno.
                     </div>
                 {% elif api_version == "v3" %}
                     <div class="info-box">
                         <strong>Modo V3 (API Key + JWT)</strong><br>
-                        Las peticiones se dirigen a <code>api_v3</code>. Además del control por API Key, se requiere iniciar sesión para obtener un token JWT. Cada petición posterior incluye el token en la cabecera <code>Authorization: Bearer &lt;token&gt;</code> para validar la sesión del usuario.
+                        Las peticiones se dirigen a api_v3. Además del control por API Key, se requiere iniciar sesión para obtener un token JWT. Cada petición posterior incluye el token en la cabecera Authorization: Bearer <token> para validar la sesión del usuario.
                     </div>
                 {% elif api_version == "v4" %}
                     <div class="info-box">
                         <strong>Modo V4 (RBAC & BOLA Protection)</strong><br>
-                        Las peticiones se dirigen a <code>api_v4</code>. Valida API Key, JWT y además implementa Control de Acceso por Roles (RBAC) (ej. solo 'admin' crea libros). Previene vulnerabilidades <strong>BOLA/IDOR</strong> asegurando que un lector solo cree, devuelva o cancele sus propios préstamos.
+                        Las peticiones se dirigen a api_v4. Valida API Key, JWT y además implementa Control de Acceso por Roles (RBAC) (ej. solo 'admin' crea libros). Previene vulnerabilidades BOLA/IDOR asegurando que un lector solo cree, devuelva o cancele sus propios préstamos.
                     </div>
                 {% elif api_version == "v5" %}
                     <div class="info-box">
                         <strong>Modo V5 (Rate Limiting)</strong><br>
-                        Las peticiones se dirigen a <code>api_v5</code>. Incluye todas las capas de seguridad de V4 y añade <strong>Rate Limiting</strong> (limitación de peticiones por minuto) para evitar ataques de denegación de servicio (DoS) o fuerza bruta.
+                        Las peticiones se dirigen a api_v5. Incluye todas las capas de seguridad de V4 y añade Rate Limiting (limitación de peticiones por minuto) para evitar ataques de denegación de servicio (DoS) o fuerza bruta.
                     </div>
                 {% endif %}
             </div>
@@ -543,6 +543,17 @@
                         </form>
                     </div>
 
+                    <!-- CONSULTAR PRÉSTAMOS -->
+                    <div class="action-card">
+                        <h3>Préstamos Activos</h3>
+                        <form method="POST">
+                            <input type="hidden" name="accion" value="prestamos">
+                            <button type="submit" class="btn-secondary" style="width: 100%;">
+                                Listar Préstamos
+                            </button>
+                        </form>
+                    </div>
+
                     <!-- BUSCAR LIBRO POR NOMBRE -->
                     <div class="action-card">
                         <h3>Buscar Libro</h3>
@@ -562,16 +573,35 @@
                             <input type="hidden" name="accion" value="crear_prestamo">
                             <div style="display: grid; gap: 8px;">
                                 <div class="form-row">
-                                    <label>ID Préstamo</label>
-                                    <input type="number" name="id_prestamo" value="2" min="1" required>
+                                    <label>Libro a Prestar</label>
+                                    <select name="id_libro" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; outline: none; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                        {% if libros_disponibles %}
+                                            {% for libro in libros_disponibles %}
+                                                <option value="{{ libro.id_libro }}">{{ libro.nombre }} (ID: {{ libro.id_libro }})</option>
+                                            {% endfor %}
+                                        {% else %}
+                                            <option value="">No hay libros disponibles (Inicie sesión o devuelva alguno)</option>
+                                        {% endif %}
+                                    </select>
                                 </div>
                                 <div class="form-row">
-                                    <label>ID Libro</label>
-                                    <input type="number" name="id_libro" value="2" min="1" required>
-                                </div>
-                                <div class="form-row">
-                                    <label>ID Usuario</label>
-                                    <input type="number" name="usuario_id" value="2" min="1" required>
+                                    <label>Usuario del Préstamo</label>
+                                    {% if requiere_jwt and usuario_perfil %}
+                                        {% if usuario_perfil.rol == 'admin' %}
+                                            <select name="usuario_id" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; outline: none; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                                <option value="2">Lector1 (Usuario - ID: 2)</option>
+                                                <option value="1">Mauricio (Admin - ID: 1)</option>
+                                            </select>
+                                        {% else %}
+                                            <input type="hidden" name="usuario_id" value="{{ usuario_perfil.id }}">
+                                            <input type="text" value="{{ usuario_perfil.nombre }} (Lector - ID: {{ usuario_perfil.id }})" readonly style="background-color: #f1f5f9; cursor: not-allowed; border: 1px solid #cbd5e1; color: #64748b; padding: 8px 12px; border-radius: 6px; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                        {% endif %}
+                                    {% else %}
+                                        <select name="usuario_id" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; outline: none; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                            <option value="2">Lector1 (Usuario - ID: 2)</option>
+                                            <option value="1">Mauricio (Admin - ID: 1)</option>
+                                        </select>
+                                    {% endif %}
                                 </div>
                             </div>
                             <button type="submit" class="btn-primary" style="margin-top: 8px;">
@@ -585,8 +615,17 @@
                         <h3>Devolver Libro</h3>
                         <form method="POST" class="form-row">
                             <input type="hidden" name="accion" value="devolver_libro">
-                            <input type="number" name="id_libro_devolver" placeholder="ID del libro" value="1" min="1" required>
-                            <button type="submit" class="btn-secondary">
+                            <label>Seleccionar Libro</label>
+                            <select name="id_libro_devolver" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; outline: none; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                {% if libros_prestados %}
+                                    {% for libro in libros_prestados %}
+                                        <option value="{{ libro.id_libro }}">{{ libro.nombre }} (ID: {{ libro.id_libro }})</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">No hay libros con préstamo activo</option>
+                                {% endif %}
+                            </select>
+                            <button type="submit" class="btn-secondary" style="margin-top: 8px;">
                                 Devolver
                             </button>
                         </form>
@@ -597,9 +636,57 @@
                         <h3>Eliminar Préstamo (Log)</h3>
                         <form method="POST" class="form-row">
                             <input type="hidden" name="accion" value="eliminar_prestamo">
-                            <input type="number" name="id_prestamo_eliminar" placeholder="ID del préstamo" value="1" min="1" required>
-                            <button type="submit" class="btn-danger">
+                            <label>Seleccionar Préstamo</label>
+                            <select name="id_prestamo_eliminar" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; outline: none; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                {% if prestamos_activos %}
+                                    {% for prestamo in prestamos_activos %}
+                                        <option value="{{ prestamo.id_prestamo }}">Préstamo #{{ prestamo.id_prestamo }} - Libro: {{ prestamo.nombre_libro }} (Usuario: {{ prestamo.correo_usuario }})</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">No hay préstamos registrados</option>
+                                {% endif %}
+                            </select>
+                            <button type="submit" class="btn-danger" style="margin-top: 8px;">
                                 Eliminar
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- CREAR NUEVO USUARIO -->
+                    <div class="action-card" style="grid-column: span 2; border-color: #cbd5e1;">
+                        <h3>Crear Nuevo Usuario</h3>
+                        <p style="font-size: 0.75rem; color: #64748b;">
+                            {% if requiere_jwt %}
+                                Desde la Versión 3, esta operación está restringida: solo los usuarios autenticados con rol de administrador pueden crear nuevos usuarios.
+                            {% else %}
+                                Registro abierto de usuarios en la base de datos para pruebas.
+                            {% endif %}
+                        </p>
+                        <form method="POST" class="form-row" style="margin-top: 8px;">
+                            <input type="hidden" name="accion" value="crear_usuario">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <div class="form-row">
+                                    <label>Nombre completo</label>
+                                    <input type="text" name="nombre_usuario" placeholder="Ej. Juan Pérez" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                </div>
+                                <div class="form-row">
+                                    <label>Correo Electrónico</label>
+                                    <input type="email" name="email_usuario" placeholder="Ej. juan@email.com" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                </div>
+                                <div class="form-row">
+                                    <label>Contraseña</label>
+                                    <input type="password" name="password_usuario" placeholder="Mínimo 6 caracteres" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                </div>
+                                <div class="form-row">
+                                    <label>Rol del Usuario</label>
+                                    <select name="rol_usuario" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                        <option value="usuario">Lector (Usuario común)</option>
+                                        <option value="admin">Administrador</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary" style="margin-top: 8px;">
+                                Registrar Usuario
                             </button>
                         </form>
                     </div>
@@ -612,23 +699,37 @@
                             Laboratorio BOLA/IDOR (V4+)
                         </h3>
                         <p style="font-size: 0.75rem; color: #7f1d1d;">Permite probar cómo un Lector puede acceder a datos de otros préstamos en la ruta vulnerable, y cómo es bloqueado en la ruta protegida.</p>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
-                            <form method="POST" class="form-row">
-                                <input type="hidden" name="accion" value="ver_prestamo_vulnerable">
-                                <label>ID Préstamo (Ruta Vulnerable)</label>
-                                <input type="number" name="id_prestamo_ver" value="1" min="1" required>
-                                <button type="submit" class="btn-danger" style="width: 100%; font-size: 0.75rem; padding: 6px;">
-                                    Consulta Vulnerable
-                                </button>
-                            </form>
-                            <form method="POST" class="form-row">
-                                <input type="hidden" name="accion" value="ver_prestamo_seguro">
-                                <label>ID Préstamo (Ruta Protegida)</label>
-                                <input type="number" name="id_prestamo_ver" value="1" min="1" required>
-                                <button type="submit" class="btn-primary" style="width: 100%; font-size: 0.75rem; padding: 6px; background-color: #4f46e5;">
-                                    Consulta Protegida
-                                </button>
-                            </form>
+                        
+                        <div class="info-box" style="margin-top: 8px; border-color: #fca5a5; background-color: #fff5f5; color: #991b1b; font-size: 0.75rem;">
+                            <strong>Guía de explotación:</strong><br>
+                            • Tu préstamo propio (si estás como Lector1) es el *ID 1*.<br>
+                            • El préstamo ajeno de Lector2 es el *ID 2*.<br>
+                            <em>Ingresa el ID del préstamo a continuación y compáralo en ambas rutas:</em>
+                        </div>
+
+                        <div style="margin-top: 12px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end;">
+                                <div class="form-row" style="grid-column: span 2;">
+                                    <label>ID del Préstamo a Consultar</label>
+                                    <input type="number" id="id_prestamo_ver_input" value="2" min="1" required style="background: white; border: 1px solid #cbd5e1; color: var(--text-main); padding: 8px 12px; border-radius: 6px; font-family: var(--font-main); font-size: 0.85rem; width: 100%;">
+                                </div>
+                                
+                                <form method="POST" style="width: 100%;" onsubmit="document.getElementById('hidden_vulnerable_id').value = document.getElementById('id_prestamo_ver_input').value;">
+                                    <input type="hidden" name="accion" value="ver_prestamo_vulnerable">
+                                    <input type="hidden" name="id_prestamo_ver" id="hidden_vulnerable_id">
+                                    <button type="submit" class="btn-danger" style="width: 100%; font-size: 0.75rem; padding: 10px 6px;">
+                                        Consulta Vulnerable (BOLA)
+                                    </button>
+                                </form>
+
+                                <form method="POST" style="width: 100%;" onsubmit="document.getElementById('hidden_seguro_id').value = document.getElementById('id_prestamo_ver_input').value;">
+                                    <input type="hidden" name="accion" value="ver_prestamo_seguro">
+                                    <input type="hidden" name="id_prestamo_ver" id="hidden_seguro_id">
+                                    <button type="submit" class="btn-primary" style="width: 100%; font-size: 0.75rem; padding: 10px 6px; background-color: #4f46e5;">
+                                        Consulta Protegida (Seguro)
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                     {% endif %}
@@ -644,16 +745,6 @@
                 <h2>Consola de Depuración de Respuestas</h2>
 
                 {% if resultado %}
-                    <div class="status-badge">
-                        <span>Estado de la Solicitud:</span>
-                        {% if resultado.status_code %}
-                            <span class="status-code {% if resultado.ok %}success{% else %}error{% endif %}">
-                                {{ resultado.status_code }} {% if resultado.ok %}OK{% else %}ERROR{% endif %}
-                            </span>
-                        {% else %}
-                            <span class="status-code error">CONEXIÓN FALLIDA</span>
-                        {% endif %}
-                    </div>
 
                     {% if resultado.url %}
                         <div class="form-row">
@@ -682,7 +773,7 @@ Authorization: Bearer {{ jwt_token[:15] }}...{{ jwt_token[-15:] }}
 
                     <div class="form-row" style="flex-grow: 1;">
                         <label>Cuerpo de la Respuesta (JSON):</label>
-                        <pre><code>{{ resultado.data | tojson(indent=2) }}</code></pre>
+                        <pre><code>{{ resultado_json }}</code></pre>
                     </div>
                 {% else %}
                     <div class="empty-result">
